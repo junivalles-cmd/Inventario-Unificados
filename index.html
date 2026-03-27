@@ -87,53 +87,93 @@ function limpiarNoDeseadas(headers){
 }
 
 function buscar(){
-  const p = document.getElementById('p').value.toLowerCase().trim();
-  const d = document.getElementById('d').value.toLowerCase().trim();
 
-  const rEl = document.getElementById('r');
-  const countEl = document.getElementById('count');
+ let p=document.getElementById('p').value.toLowerCase()
+ let d=document.getElementById('d').value.toLowerCase()
 
-  if(!p && !d){ rEl.innerHTML=""; countEl.textContent="0"; return; }
+ if(!p && !d){
+  r.innerHTML=""
+  count.innerText=0
+  return
+ }
 
-  const COL_PARTE = HEAD.find(h=>h.toLowerCase().includes("parte"));
-  const COL_DESC  = HEAD.find(h=>h.toLowerCase().includes("desc"));
-  const COL_SEC = HEAD.find(h=>h.toLowerCase().includes("inventario"))
-  //const COL_SEC   = HEAD.find(h=>h.toLowerCase().includes("ubic") || h.toLowerCase().includes("seccion") || h.toLowerCase().includes("bodega")) || HEAD[0];
+ const COL_PARTE = HEAD.find(h=>h.toLowerCase().includes("parte"))
+ const COL_DESC  = HEAD.find(h=>h.toLowerCase().includes("desc"))
+ const COL_SEC   = HEAD.find(h=>h.toLowerCase().includes("inventario")) || HEAD[0]
 
-  const filtered = DATA.filter(x=>{
-    const parte = String(x[COL_PARTE]||"").toLowerCase();
-    const desc  = String(x[COL_DESC]||"").toLowerCase();
-    return (!p || parte.includes(p)) && (!d || desc.includes(d));
-  });
+ let f=DATA.filter(x=>
+  (!p || String(x[COL_PARTE]||"").toLowerCase().includes(p)) &&
+  (!d || String(x[COL_DESC]||"").toLowerCase().includes(d))
+ )
 
-  if(filtered.length===0){
-    rEl.innerHTML = "<div class='alert'>SIN EXISTENCIA</div>";
-    countEl.textContent = "0";
-    return;
-  }
+ if(f.length===0){
+  r.innerHTML="<div class='alert'>SIN EXISTENCIA</div>"
+  count.innerText=0
+  return
+ }
 
-  const showHeaders = limpiarNoDeseadas(HEAD);
+ // 🔥 SI ES PC → TABLA
+ if(esPC()){
 
-  const grupos = {};
-  filtered.forEach(it=>{
-    const sec = it[COL_SEC] || "SIN UBICACION";
-    (grupos[sec] ||= []).push(it);
-  });
+  let html="<table style='width:100%;border-collapse:collapse'>"
 
-  let html="";
-  Object.keys(grupos).forEach(sec=>{
-    html += `<div class="section">${sec}</div>`;
-    grupos[sec].forEach(item=>{
-      html += `<div class="item">`;
-      showHeaders.forEach(h=>{
-        html += `<div class="row"><b>${h}</b><span>${item[h]||""}</span></div>`;
-      });
-      html += `</div>`;
-    });
-  });
+  html+="<thead><tr>"
+  HEAD.forEach(h=>{
+    if(h.toLowerCase().includes("p.unitario") || h.toLowerCase().includes("p dólar") || h.toLowerCase().includes("item")) return
+    html+=`<th style='border:1px solid #ddd;padding:8px;background:#f1f5f9'>${h}</th>`
+  })
+  html+="</tr></thead><tbody>"
 
-  rEl.innerHTML = html;
-  countEl.textContent = String(filtered.length);
+  f.forEach(row=>{
+    html+="<tr>"
+    HEAD.forEach(h=>{
+      if(h.toLowerCase().includes("p.unitario") || h.toLowerCase().includes("p dólar") || h.toLowerCase().includes("item")) return
+      html+=`<td style='border:1px solid #ddd;padding:8px'>${row[h]||""}</td>`
+    })
+    html+="</tr>"
+  })
+
+  html+="</tbody></table>"
+
+  r.innerHTML=html
+  count.innerText=f.length
+  return
+ }
+
+ // 📱 MÓVIL → TARJETAS (tu diseño actual)
+ let grupos={}
+
+ f.forEach(i=>{
+  let s=i[COL_SEC]||"SIN UBICACION"
+  if(!grupos[s]) grupos[s]=[]
+  grupos[s].push(i)
+ })
+
+ let html=""
+
+ Object.keys(grupos).forEach(sec=>{
+  html+=`<div class="section">${sec}</div>`
+
+  grupos[sec].forEach(item=>{
+    html+=`<div class="item">`
+
+    HEAD.forEach(h=>{
+      let hlow=h.toLowerCase()
+      if(hlow.includes("p.unitario") || hlow.includes("p dólar") || hlow.includes("item")) return
+
+      html+=`
+      <div class="row">
+        <div class="label">${h}</div>
+        <div>${item[h]||""}</div>
+      </div>`
+    })
+
+    html+=`</div>`
+  })
+ })
+
+ r.innerHTML=html
+ count.innerText=f.length
 }
 
 // init
