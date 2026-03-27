@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Inventario Online</title>
+<style>
+body{font-family:system-ui;margin:0;background:#eef2f7}
+.header{background:#fff;padding:10px;font-weight:bold}
+.card{background:#fff;margin:10px;padding:12px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+input{width:100%;padding:12px;margin:5px 0;border-radius:10px;border:1px solid #ccc}
+button{width:100%;padding:12px;background:#0ea5e9;color:white;border:none;border-radius:10px}
+.section{margin-top:10px;font-weight:bold;color:#0ea5e9}
+.item{background:#fff;margin-top:10px;padding:10px;border-radius:10px;border:1px solid #e5e7eb}
+.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #ddd}
+.row:last-child{border-bottom:none}
+.alert{color:red;text-align:center;font-weight:bold;padding:15px}
+.muted{color:#64748b}
+</style>
+</head>
+<body>
+
+<div class="header">Inventario Online</div>
+
+<div class="card">
+  <label>Buscar Nº Parte</label>
+  <input id="p" placeholder="Ej: 12345">
+  <label>Descripción contiene</label>
+  <input id="d" placeholder="Ej: filtro, bomba...">
+  <button onclick="buscar()">Buscar</button>
+  <div class="muted" id="status">Cargando datos...</div>
+</div>
+
+<div class="card">
+  <div><b>Resultados</b> <span id="count">0</span></div>
+  <div id="r"></div>
+</div>
+
+<script>
+let DATA=[];
+let HEAD=[];
+
+// 🔥 Pega aquí tu link de Google Sheets publicado como CSV
+const URL_CSV = "https://drive.google.com/file/d/1K4zEnHvfoFI2Wcxp4iUz-HBzgoJJVNSR/view?usp=drive_link";
+
+function parseCSV(text){
+  // parser simple (soporta comillas básicas)
+  const rows = text.split(/\r?\n/).filter(Boolean);
+  const out = rows.map(line=>{
+    const result=[]; let cur=""; let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){ inQ=!inQ; continue; }
+      if(ch===',' && !inQ){ result.push(cur); cur=""; continue; }
+      cur+=ch;
+    }
+    result.push(cur);
+    return result;
+  });
+  return out;
+}
+
+async function cargarDatos(){
+  try{
+    const res = await fetch(URL_CSV, {cache:"no-store"});
+    const text = await res.text();
+    const rows = parseCSV(text);
+
+    HEAD = rows[0] || [];
+    DATA = rows.slice(1).map(r=>{
+      const obj={};
+      HEAD.forEach((h,i)=> obj[h]= (r[i] ?? "").trim());
+      return obj;
+    });
+
+    document.getElementById("status").textContent = "Datos cargados ✓";
+  }catch(e){
+    document.getElementById("status").textContent = "Error cargando datos";
+  }
+}
+
+function limpiarNoDeseadas(headers){
+  return headers.filter(h=>{
+    const s = h.toLowerCase();
+    return !(s.includes("p.unitario") || s.includes("p unitario") || s.includes("p.dolar") || s.includes("p dolar") || s.includes("p dólar") || s.includes("item"));
+  });
+}
+
+function buscar(){
+  const p = document.getElementById('p').value.toLowerCase().trim();
+  const d = document.getElementById('d').value.toLowerCase().trim();
+
+  const rEl = document.getElementById('r');
+  const countEl = document.getElementById('count');
+
+  if(!p && !d){ rEl.innerHTML=""; countEl.textContent="0"; return; }
+
+  const COL_PARTE = HEAD.find(h=>h.toLowerCase().includes("parte"));
+  const COL_DESC  = HEAD.find(h=>h.toLowerCase().includes("desc"));
+  const COL_SEC   = HEAD.find(h=>h.toLowerCase().includes("ubic") || h.toLowerCase().includes("seccion") || h.toLowerCase().includes("bodega")) || HEAD[0];
+
+  const filtered = DATA.filter(x=>{
+    const parte = String(x[COL_PARTE]||"").toLowerCase();
+    const desc  = String(x[COL_DESC]||"").toLowerCase();
+    return (!p || parte.includes(p)) && (!d || desc.includes(d));
+  });
+
+  if(filtered.length===0){
+    rEl.innerHTML = "<div class='alert'>SIN EXISTENCIA</div>";
+    countEl.textContent = "0";
+    return;
+  }
+
+  const showHeaders = limpiarNoDeseadas(HEAD);
+
+  const grupos = {};
+  filtered.forEach(it=>{
+    const sec = it[COL_SEC] || "SIN UBICACION";
+    (grupos[sec] ||= []).push(it);
+  });
+
+  let html="";
+  Object.keys(grupos).forEach(sec=>{
+    html += `<div class="section">${sec}</div>`;
+    grupos[sec].forEach(item=>{
+      html += `<div class="item">`;
+      showHeaders.forEach(h=>{
+        html += `<div class="row"><b>${h}</b><span>${item[h]||""}</span></div>`;
+      });
+      html += `</div>`;
+    });
+  });
+
+  rEl.innerHTML = html;
+  countEl.textContent = String(filtered.length);
+}
+
+// init
+cargarDatos();
+</script>
+
+</body>
+</html>
