@@ -97,7 +97,8 @@ function buscar(){
 
   const COL_PARTE = HEAD.find(h=>h.toLowerCase().includes("parte"));
   const COL_DESC  = HEAD.find(h=>h.toLowerCase().includes("desc"));
-  const COL_SEC   = HEAD.find(h=>h.toLowerCase().includes("ubic") || h.toLowerCase().includes("seccion") || h.toLowerCase().includes("bodega")) || HEAD[0];
+  const COL_SEC = HEAD.find(h=>h.toLowerCase().includes("inventario"))
+  //const COL_SEC   = HEAD.find(h=>h.toLowerCase().includes("ubic") || h.toLowerCase().includes("seccion") || h.toLowerCase().includes("bodega")) || HEAD[0];
 
   const filtered = DATA.filter(x=>{
     const parte = String(x[COL_PARTE]||"").toLowerCase();
