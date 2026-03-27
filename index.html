@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Inventario Online</title>
 
+<!-- evitar cache -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <style>
 body{font-family:system-ui;margin:0;background:#eef2f7}
-
 .header{background:#fff;padding:10px;font-weight:bold}
 
 .card{
@@ -36,11 +40,7 @@ button{
   font-weight:bold
 }
 
-.section{
-  margin-top:10px;
-  font-weight:bold;
-  color:#0ea5e9
-}
+.section{margin-top:10px;font-weight:bold;color:#0ea5e9}
 
 .item{
   background:#fff;
@@ -57,10 +57,6 @@ button{
   border-bottom:1px dashed #ddd
 }
 
-.label{
-  font-weight:600
-}
-
 .alert{
   color:red;
   text-align:center;
@@ -75,13 +71,10 @@ table{
 
 th,td{
   border:1px solid #ddd;
-  padding:8px;
-  text-align:left
+  padding:8px
 }
 
-th{
-  background:#f1f5f9
-}
+th{background:#f1f5f9}
 </style>
 </head>
 
@@ -106,31 +99,66 @@ th{
 let DATA=[]
 let HEAD=[]
 
-// 🔥 Pega aquí tu link de Google Sheets publicado como CSV
-const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgZOJ-NC7hxBmVgfRPR0agqkrV2LRVOKqyC_1qerVDPZquweN45wmIuDQmwzS12Z1nxuqPqmNB0Fjr/pub?output=csv";
+// 🔥 PEGA TU LINK AQUÍ
+const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgZOJ-NC7hxBmVgfRPR0agqkrV2LRVOKqyC_1qerVDPZquweN45wmIuDQmwzS12Z1nxuqPqmNB0Fjr/pub?output=csv"
 
 // detectar PC
 function esPC(){
   return window.innerWidth > 768
 }
 
+// parser CSV mejorado
+function parseCSV(text){
+  const rows = text.split(/\r?\n/).filter(Boolean)
+  return rows.map(r=>{
+    let cols = []
+    let current = ""
+    let inQuotes = false
+
+    for(let i=0;i<r.length;i++){
+      let char = r[i]
+
+      if(char === '"'){
+        inQuotes = !inQuotes
+        continue
+      }
+
+      if(char === ',' && !inQuotes){
+        cols.push(current)
+        current = ""
+      } else {
+        current += char
+      }
+    }
+
+    cols.push(current)
+    return cols
+  })
+}
+
 // cargar datos
 async function cargarDatos(){
+ try{
+  const res = await fetch(URL_CSV + "&t=" + Date.now())
+  const text = await res.text()
 
- const res = await fetch(URL_CSV)
- const text = await res.text()
+  const rows = parseCSV(text)
 
- const rows = text.split("\\n").map(r=>r.split(","))
+  HEAD = rows[0]
 
- HEAD = rows[0]
+  DATA = rows.slice(1).map(r=>{
+    let obj={}
+    HEAD.forEach((h,i)=>obj[h]=r[i])
+    return obj
+  })
 
- DATA = rows.slice(1).map(r=>{
-   let obj={}
-   HEAD.forEach((h,i)=>obj[h]=r[i])
-   return obj
- })
- document.getElementById("status").innerText="Datos cargados ✓"
+  document.getElementById("status").innerText="Datos cargados ✓"
+
+ }catch(e){
+  document.getElementById("status").innerText="❌ Error cargando datos"
+ }
 }
+
 // buscar
 function buscar(){
 
@@ -160,12 +188,11 @@ function buscar(){
 
  // 💻 PC → TABLA
  if(esPC()){
-
   let html="<table><thead><tr>"
 
   HEAD.forEach(h=>{
-    let hlow=h.toLowerCase()
-    if(hlow.includes("p.unitario") || hlow.includes("p dólar") || hlow.includes("item")) return
+    let s=h.toLowerCase()
+    if(s.includes("p.unitario") || s.includes("p dólar") || s.includes("item")) return
     html+=`<th>${h}</th>`
   })
 
@@ -175,8 +202,8 @@ function buscar(){
     html+="<tr>"
 
     HEAD.forEach(h=>{
-      let hlow=h.toLowerCase()
-      if(hlow.includes("p.unitario") || hlow.includes("p dólar") || hlow.includes("item")) return
+      let s=h.toLowerCase()
+      if(s.includes("p.unitario") || s.includes("p dólar") || s.includes("item")) return
       html+=`<td>${row[h]||""}</td>`
     })
 
@@ -184,7 +211,6 @@ function buscar(){
   })
 
   html+="</tbody></table>"
-
   r.innerHTML=html
   count.innerText=f.length
   return
@@ -208,13 +234,13 @@ function buscar(){
     html+=`<div class="item">`
 
     HEAD.forEach(h=>{
-      let hlow=h.toLowerCase()
-      if(hlow.includes("p.unitario") || hlow.includes("p dólar") || hlow.includes("item")) return
+      let s=h.toLowerCase()
+      if(s.includes("p.unitario") || s.includes("p dólar") || s.includes("item")) return
 
       html+=`
       <div class="row">
-        <div class="label">${h}</div>
-        <div>${item[h]||""}</div>
+        <b>${h}</b>
+        <span>${item[h]||""}</span>
       </div>`
     })
 
