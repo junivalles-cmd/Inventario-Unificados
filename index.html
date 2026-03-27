@@ -4,88 +4,136 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Inventario Online</title>
+
 <style>
 body{font-family:system-ui;margin:0;background:#eef2f7}
+
 .header{background:#fff;padding:10px;font-weight:bold}
-.card{background:#fff;margin:10px;padding:12px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
-input{width:100%;padding:12px;margin:5px 0;border-radius:10px;border:1px solid #ccc}
-button{width:100%;padding:12px;background:#0ea5e9;color:white;border:none;border-radius:10px}
-.section{margin-top:10px;font-weight:bold;color:#0ea5e9}
-.item{background:#fff;margin-top:10px;padding:10px;border-radius:10px;border:1px solid #e5e7eb}
-.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #ddd}
-.row:last-child{border-bottom:none}
-.alert{color:red;text-align:center;font-weight:bold;padding:15px}
-.muted{color:#64748b}
+
+.card{
+  background:#fff;
+  margin:10px;
+  padding:12px;
+  border-radius:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.05)
+}
+
+input{
+  width:100%;
+  padding:12px;
+  margin:5px 0;
+  border-radius:10px;
+  border:1px solid #ccc
+}
+
+button{
+  width:100%;
+  padding:12px;
+  background:#0ea5e9;
+  color:white;
+  border:none;
+  border-radius:10px;
+  font-weight:bold
+}
+
+.section{
+  margin-top:10px;
+  font-weight:bold;
+  color:#0ea5e9
+}
+
+.item{
+  background:#fff;
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #e5e7eb
+}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  padding:6px 0;
+  border-bottom:1px dashed #ddd
+}
+
+.label{
+  font-weight:600
+}
+
+.alert{
+  color:red;
+  text-align:center;
+  font-weight:bold;
+  padding:15px
+}
+
+table{
+  width:100%;
+  border-collapse:collapse
+}
+
+th,td{
+  border:1px solid #ddd;
+  padding:8px;
+  text-align:left
+}
+
+th{
+  background:#f1f5f9
+}
 </style>
 </head>
+
 <body>
 
 <div class="header">Inventario Online</div>
 
 <div class="card">
-  <label>Buscar Nº Parte</label>
-  <input id="p" placeholder="Ej: 12345">
-  <label>Descripción contiene</label>
-  <input id="d" placeholder="Ej: filtro, bomba...">
-  <button onclick="buscar()">Buscar</button>
-  <div class="muted" id="status">Cargando datos...</div>
+<input id="p" placeholder="Buscar Nº Parte">
+<input id="d" placeholder="Buscar Descripción">
+<button onclick="buscar()">Buscar</button>
+<div id="status">Cargando datos...</div>
 </div>
 
 <div class="card">
-  <div><b>Resultados</b> <span id="count">0</span></div>
-  <div id="r"></div>
+<b>Resultados</b> <span id="count">0</span>
+<div id="r"></div>
 </div>
 
 <script>
-let DATA=[];
-let HEAD=[];
 
-// 🔥 Pega aquí tu link de Google Sheets publicado como CSV
-const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgZOJ-NC7hxBmVgfRPR0agqkrV2LRVOKqyC_1qerVDPZquweN45wmIuDQmwzS12Z1nxuqPqmNB0Fjr/pub?output=csv";
+let DATA=[]
+let HEAD=[]
 
-function parseCSV(text){
-  // parser simple (soporta comillas básicas)
-  const rows = text.split(/\r?\n/).filter(Boolean);
-  const out = rows.map(line=>{
-    const result=[]; let cur=""; let inQ=false;
-    for(let i=0;i<line.length;i++){
-      const ch=line[i];
-      if(ch==='"'){ inQ=!inQ; continue; }
-      if(ch===',' && !inQ){ result.push(cur); cur=""; continue; }
-      cur+=ch;
-    }
-    result.push(cur);
-    return result;
-  });
-  return out;
+// 🔥 PEGA TU LINK AQUÍ
+const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgZOJ-NC7hxBmVgfRPR0agqkrV2LRVOKqyC_1qerVDPZquweN45wmIuDQmwzS12Z1nxuqPqmNB0Fjr/pub?output=csv"
+
+// detectar PC
+function esPC(){
+  return window.innerWidth > 768
 }
 
+// cargar datos
 async function cargarDatos(){
-  try{
-    const res = await fetch(URL_CSV, {cache:"no-store"});
-    const text = await res.text();
-    const rows = parseCSV(text);
 
-    HEAD = rows[0] || [];
-    DATA = rows.slice(1).map(r=>{
-      const obj={};
-      HEAD.forEach((h,i)=> obj[h]= (r[i] ?? "").trim());
-      return obj;
-    });
+ const res = await fetch(URL_CSV)
+ const text = await res.text()
 
-    document.getElementById("status").textContent = "Datos cargados ✓";
-  }catch(e){
-    document.getElementById("status").textContent = "Error cargando datos";
-  }
+ const rows = text.split("\\n").map(r=>r.split(","))
+
+ HEAD = rows[0]
+
+ DATA = rows.slice(1).map(r=>{
+   let obj={}
+   HEAD.forEach((h,i)=>obj[h]=r[i])
+   return obj
+ })
+
+ document.getElementById("status").innerText="Datos cargados ✓"
 }
 
-function limpiarNoDeseadas(headers){
-  return headers.filter(h=>{
-    const s = h.toLowerCase();
-    return !(s.includes("p.unitario") || s.includes("p unitario") || s.includes("p.dolar") || s.includes("p dolar") || s.includes("p dólar") || s.includes("item"));
-  });
-}
-
+// buscar
 function buscar(){
 
  let p=document.getElementById('p').value.toLowerCase()
@@ -112,24 +160,28 @@ function buscar(){
   return
  }
 
- // 🔥 SI ES PC → TABLA
+ // 💻 PC → TABLA
  if(esPC()){
 
-  let html="<table style='width:100%;border-collapse:collapse'>"
+  let html="<table><thead><tr>"
 
-  html+="<thead><tr>"
   HEAD.forEach(h=>{
-    if(h.toLowerCase().includes("p.unitario") || h.toLowerCase().includes("p dólar") || h.toLowerCase().includes("item")) return
-    html+=`<th style='border:1px solid #ddd;padding:8px;background:#f1f5f9'>${h}</th>`
+    let hlow=h.toLowerCase()
+    if(hlow.includes("p.unitario") || hlow.includes("p dólar") || hlow.includes("item")) return
+    html+=`<th>${h}</th>`
   })
+
   html+="</tr></thead><tbody>"
 
   f.forEach(row=>{
     html+="<tr>"
+
     HEAD.forEach(h=>{
-      if(h.toLowerCase().includes("p.unitario") || h.toLowerCase().includes("p dólar") || h.toLowerCase().includes("item")) return
-      html+=`<td style='border:1px solid #ddd;padding:8px'>${row[h]||""}</td>`
+      let hlow=h.toLowerCase()
+      if(hlow.includes("p.unitario") || hlow.includes("p dólar") || hlow.includes("item")) return
+      html+=`<td>${row[h]||""}</td>`
     })
+
     html+="</tr>"
   })
 
@@ -140,7 +192,7 @@ function buscar(){
   return
  }
 
- // 📱 MÓVIL → TARJETAS (tu diseño actual)
+ // 📱 MÓVIL → TARJETAS
  let grupos={}
 
  f.forEach(i=>{
@@ -176,8 +228,9 @@ function buscar(){
  count.innerText=f.length
 }
 
-// init
-cargarDatos();
+// iniciar
+cargarDatos()
+
 </script>
 
 </body>
