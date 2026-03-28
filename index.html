@@ -4,28 +4,29 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-<title>Inventario Online</title>
-
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
+<title>Inventario Pro</title>
 
 <style>
-body{font-family:system-ui;margin:0;background:#eef2f7}
+body{
+  font-family:system-ui;
+  margin:0;
+  background:#eef2f7;
+}
 
 .header{
-  background:#fff;
-  padding:12px;
+  background:#0ea5e9;
+  color:white;
+  padding:14px;
   font-weight:bold;
-  font-size:18px
+  font-size:18px;
 }
 
 .card{
-  background:#fff;
+  background:white;
   margin:10px;
-  padding:12px;
-  border-radius:12px;
-  box-shadow:0 2px 6px rgba(0,0,0,.05)
+  padding:14px;
+  border-radius:14px;
+  box-shadow:0 3px 10px rgba(0,0,0,.08);
 }
 
 input{
@@ -33,7 +34,7 @@ input{
   padding:12px;
   margin:6px 0;
   border-radius:10px;
-  border:1px solid #ccc
+  border:1px solid #ccc;
 }
 
 button{
@@ -43,70 +44,87 @@ button{
   color:white;
   border:none;
   border-radius:10px;
-  font-weight:bold
+  font-weight:bold;
 }
 
 .section{
-  margin-top:10px;
+  margin-top:15px;
   font-weight:bold;
   color:#0ea5e9;
-  font-size:16px
+  font-size:16px;
 }
 
 .item{
-  background:#fff;
   margin-top:10px;
   padding:12px;
   border-radius:12px;
-  border:1px solid #e5e7eb
+  border:1px solid #e5e7eb;
 }
 
 .row{
   display:flex;
   justify-content:space-between;
+  align-items:flex-start;
   gap:10px;
-  padding:6px 0;
-  border-bottom:1px dashed #ddd
+  padding:8px 0;
+  border-bottom:1px dashed #ddd;
 }
 
 .row:last-child{
-  border-bottom:none
+  border-bottom:none;
 }
 
 .label{
   font-weight:bold;
-  min-width:140px;
-  color:#374151
+  min-width:130px;
+  color:#374151;
+}
+
+.value{
+  text-align:right;
+  max-width:60%;
+  word-break:break-word;
+}
+
+.stock-ok{
+  color:#16a34a;
+  font-weight:bold;
+}
+
+.stock-zero{
+  color:#dc2626;
+  font-weight:bold;
 }
 
 .alert{
-  color:red;
   text-align:center;
+  color:red;
   font-weight:bold;
-  padding:15px
+  padding:15px;
 }
 
 /* TABLA PC */
 table{
   width:100%;
-  border-collapse:collapse
+  border-collapse:collapse;
+  background:white;
 }
 
 th,td{
   border:1px solid #ddd;
-  padding:8px;
-  text-align:left
+  padding:10px;
 }
 
 th{
-  background:#f1f5f9
+  background:#0ea5e9;
+  color:white;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">Inventario Online</div>
+<div class="header">Inventario Pro</div>
 
 <div class="card">
 <input id="p" placeholder="Buscar Nº Parte">
@@ -125,34 +143,26 @@ th{
 let DATA=[]
 let HEAD=[]
 
-// 🔥 PEGA TU LINK AQUÍ
 const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgZOJ-NC7hxBmVgfRPR0agqkrV2LRVOKqyC_1qerVDPZquweN45wmIuDQmwzS12Z1nxuqPqmNB0Fjr/pub?output=csv"
 
-// detectar PC
 function esPC(){
   return window.innerWidth > 768
 }
 
-// parser CSV
 function parseCSV(text){
   const rows = text.split(/\r?\n/).filter(Boolean)
   return rows.map(r=>{
-    let cols=[], current="", inQuotes=false
-    for(let i=0;i<r.length;i++){
-      let c=r[i]
-      if(c === '"'){ inQuotes=!inQuotes; continue }
-      if(c === ',' && !inQuotes){
-        cols.push(current); current=""
-      } else {
-        current+=c
-      }
+    let cols=[], cur="", q=false
+    for(let c of r){
+      if(c=='"'){q=!q;continue}
+      if(c==','&&!q){cols.push(cur);cur=""}
+      else cur+=c
     }
-    cols.push(current)
+    cols.push(cur)
     return cols
   })
 }
 
-// cargar datos
 async function cargarDatos(){
  try{
   const res = await fetch(URL_CSV + "&t=" + Date.now())
@@ -163,37 +173,32 @@ async function cargarDatos(){
   HEAD = rows[0]
 
   DATA = rows.slice(1).map(r=>{
-    let obj={}
-    HEAD.forEach((h,i)=>obj[h]=r[i])
-    return obj
+    let o={}
+    HEAD.forEach((h,i)=>o[h]=r[i])
+    return o
   })
 
-  document.getElementById("status").innerText="Datos cargados ✓"
-
+  status.innerText="Datos cargados ✓"
  }catch(e){
-  document.getElementById("status").innerText="❌ Error cargando datos"
+  status.innerText="Error cargando datos"
  }
 }
 
-// limpiar nombre columnas
 function limpiarCol(h){
  let s=h.toLowerCase()
-
  if(s.includes("descripcion")) return "DESCRIPCIÓN"
  if(s.includes("parte")) return "N° PARTE"
  if(s.includes("codigo")) return "CÓDIGO"
  if(s.includes("inventario")) return "INVENTARIO"
  if(s.includes("ubic")) return "UBICACIÓN"
  if(s.includes("cantidad")) return "CANTIDAD"
-
  return h
 }
 
-// buscar
 function buscar(){
 
- let p=document.getElementById('p').value.toLowerCase()
- let d=document.getElementById('d').value.toLowerCase()
+ let p=pInput.value.toLowerCase()
+ let d=dInput.value.toLowerCase()
 
  if(!p && !d){
   r.innerHTML=""
@@ -216,14 +221,13 @@ function buscar(){
   return
  }
 
- // 💻 PC → TABLA
+ // 💻 PC TABLA
  if(esPC()){
-
   let html="<table><thead><tr>"
 
   HEAD.forEach(h=>{
     let s=h.toLowerCase()
-    if(s.includes("p.unitario") || s.includes("p dólar") || s.includes("item")) return
+    if(s.includes("p.unitario")||s.includes("p dólar")||s.includes("item")) return
     html+=`<th>${limpiarCol(h)}</th>`
   })
 
@@ -233,20 +237,19 @@ function buscar(){
     html+="<tr>"
     HEAD.forEach(h=>{
       let s=h.toLowerCase()
-      if(s.includes("p.unitario") || s.includes("p dólar") || s.includes("item")) return
+      if(s.includes("p.unitario")||s.includes("p dólar")||s.includes("item")) return
       html+=`<td>${row[h]||""}</td>`
     })
     html+="</tr>"
   })
 
   html+="</tbody></table>"
-
   r.innerHTML=html
   count.innerText=f.length
   return
  }
 
- // 📱 MÓVIL → TARJETAS
+ // 📱 TARJETAS PRO
  let grupos={}
 
  f.forEach(i=>{
@@ -265,12 +268,20 @@ function buscar(){
 
     HEAD.forEach(h=>{
       let s=h.toLowerCase()
-      if(s.includes("p.unitario") || s.includes("p dólar") || s.includes("item")) return
+      if(s.includes("p.unitario")||s.includes("p dólar")||s.includes("item")) return
+
+      let val=item[h]||""
+
+      // color stock
+      if(s.includes("cantidad")){
+        let n=parseFloat(val)
+        val = `<span class="${n>0?'stock-ok':'stock-zero'}">${val}</span>`
+      }
 
       html+=`
       <div class="row">
         <div class="label">${limpiarCol(h)}</div>
-        <div>${item[h]||""}</div>
+        <div class="value">${val}</div>
       </div>`
     })
 
@@ -282,7 +293,10 @@ function buscar(){
  count.innerText=f.length
 }
 
-// iniciar
+// inputs
+const pInput=document.getElementById("p")
+const dInput=document.getElementById("d")
+
 cargarDatos()
 
 </script>
