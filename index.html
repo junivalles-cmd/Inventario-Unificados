@@ -3,16 +3,22 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
 <title>Inventario Online</title>
 
-<!-- evitar cache -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
 <style>
 body{font-family:system-ui;margin:0;background:#eef2f7}
-.header{background:#fff;padding:10px;font-weight:bold}
+
+.header{
+  background:#fff;
+  padding:12px;
+  font-weight:bold;
+  font-size:18px
+}
 
 .card{
   background:#fff;
@@ -25,7 +31,7 @@ body{font-family:system-ui;margin:0;background:#eef2f7}
 input{
   width:100%;
   padding:12px;
-  margin:5px 0;
+  margin:6px 0;
   border-radius:10px;
   border:1px solid #ccc
 }
@@ -40,21 +46,37 @@ button{
   font-weight:bold
 }
 
-.section{margin-top:10px;font-weight:bold;color:#0ea5e9}
+.section{
+  margin-top:10px;
+  font-weight:bold;
+  color:#0ea5e9;
+  font-size:16px
+}
 
 .item{
   background:#fff;
   margin-top:10px;
-  padding:10px;
-  border-radius:10px;
+  padding:12px;
+  border-radius:12px;
   border:1px solid #e5e7eb
 }
 
 .row{
   display:flex;
   justify-content:space-between;
+  gap:10px;
   padding:6px 0;
   border-bottom:1px dashed #ddd
+}
+
+.row:last-child{
+  border-bottom:none
+}
+
+.label{
+  font-weight:bold;
+  min-width:140px;
+  color:#374151
 }
 
 .alert{
@@ -64,6 +86,7 @@ button{
   padding:15px
 }
 
+/* TABLA PC */
 table{
   width:100%;
   border-collapse:collapse
@@ -71,10 +94,13 @@ table{
 
 th,td{
   border:1px solid #ddd;
-  padding:8px
+  padding:8px;
+  text-align:left
 }
 
-th{background:#f1f5f9}
+th{
+  background:#f1f5f9
+}
 </style>
 </head>
 
@@ -107,30 +133,20 @@ function esPC(){
   return window.innerWidth > 768
 }
 
-// parser CSV mejorado
+// parser CSV
 function parseCSV(text){
   const rows = text.split(/\r?\n/).filter(Boolean)
   return rows.map(r=>{
-    let cols = []
-    let current = ""
-    let inQuotes = false
-
+    let cols=[], current="", inQuotes=false
     for(let i=0;i<r.length;i++){
-      let char = r[i]
-
-      if(char === '"'){
-        inQuotes = !inQuotes
-        continue
-      }
-
-      if(char === ',' && !inQuotes){
-        cols.push(current)
-        current = ""
+      let c=r[i]
+      if(c === '"'){ inQuotes=!inQuotes; continue }
+      if(c === ',' && !inQuotes){
+        cols.push(current); current=""
       } else {
-        current += char
+        current+=c
       }
     }
-
     cols.push(current)
     return cols
   })
@@ -157,6 +173,20 @@ async function cargarDatos(){
  }catch(e){
   document.getElementById("status").innerText="❌ Error cargando datos"
  }
+}
+
+// limpiar nombre columnas
+function limpiarCol(h){
+ let s=h.toLowerCase()
+
+ if(s.includes("descripcion")) return "DESCRIPCIÓN"
+ if(s.includes("parte")) return "N° PARTE"
+ if(s.includes("codigo")) return "CÓDIGO"
+ if(s.includes("inventario")) return "INVENTARIO"
+ if(s.includes("ubic")) return "UBICACIÓN"
+ if(s.includes("cantidad")) return "CANTIDAD"
+
+ return h
 }
 
 // buscar
@@ -188,29 +218,29 @@ function buscar(){
 
  // 💻 PC → TABLA
  if(esPC()){
+
   let html="<table><thead><tr>"
 
   HEAD.forEach(h=>{
     let s=h.toLowerCase()
     if(s.includes("p.unitario") || s.includes("p dólar") || s.includes("item")) return
-    html+=`<th>${h}</th>`
+    html+=`<th>${limpiarCol(h)}</th>`
   })
 
   html+="</tr></thead><tbody>"
 
   f.forEach(row=>{
     html+="<tr>"
-
     HEAD.forEach(h=>{
       let s=h.toLowerCase()
       if(s.includes("p.unitario") || s.includes("p dólar") || s.includes("item")) return
       html+=`<td>${row[h]||""}</td>`
     })
-
     html+="</tr>"
   })
 
   html+="</tbody></table>"
+
   r.innerHTML=html
   count.innerText=f.length
   return
@@ -239,8 +269,8 @@ function buscar(){
 
       html+=`
       <div class="row">
-        <b>${h}</b>
-        <span>${item[h]||""}</span>
+        <div class="label">${limpiarCol(h)}</div>
+        <div>${item[h]||""}</div>
       </div>`
     })
 
