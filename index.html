@@ -6,7 +6,12 @@
 
 <title>Inventario Pro</title>
 
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
 <style>
+
+*{box-sizing:border-box;}
+
 body{
   font-family:system-ui;
   margin:0;
@@ -51,7 +56,6 @@ button{
   margin-top:15px;
   font-weight:bold;
   color:#0ea5e9;
-  font-size:16px;
 }
 
 .item{
@@ -64,7 +68,6 @@ button{
 .row{
   display:flex;
   justify-content:space-between;
-  align-items:flex-start;
   gap:10px;
   padding:8px 0;
   border-bottom:1px dashed #ddd;
@@ -77,7 +80,6 @@ button{
 .label{
   font-weight:bold;
   min-width:130px;
-  color:#374151;
 }
 
 .value{
@@ -86,15 +88,8 @@ button{
   word-break:break-word;
 }
 
-.stock-ok{
-  color:#16a34a;
-  font-weight:bold;
-}
-
-.stock-zero{
-  color:#dc2626;
-  font-weight:bold;
-}
+.stock-ok{color:#16a34a;font-weight:bold;}
+.stock-zero{color:#dc2626;font-weight:bold;}
 
 .alert{
   text-align:center;
@@ -119,6 +114,7 @@ th{
   background:#0ea5e9;
   color:white;
 }
+
 </style>
 </head>
 
@@ -145,10 +141,12 @@ let HEAD=[]
 
 const URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgZOJ-NC7hxBmVgfRPR0agqkrV2LRVOKqyC_1qerVDPZquweN45wmIuDQmwzS12Z1nxuqPqmNB0Fjr/pub?output=csv"
 
+// detectar PC
 function esPC(){
   return window.innerWidth > 768
 }
 
+// parser CSV
 function parseCSV(text){
   const rows = text.split(/\r?\n/).filter(Boolean)
   return rows.map(r=>{
@@ -163,10 +161,23 @@ function parseCSV(text){
   })
 }
 
+// cargar datos
 async function cargarDatos(){
  try{
-  const res = await fetch(URL_CSV + "&t=" + Date.now())
+
+  status.innerText="Cargando datos..."
+
+  const res = await fetch(
+    URL_CSV + (URL_CSV.includes("?")?"&":"?") + "t=" + Date.now()
+  )
+
+  if(!res.ok) throw new Error("Error fetch")
+
   const text = await res.text()
+
+  if(!text || text.length < 10){
+    throw new Error("CSV vacío")
+  }
 
   const rows = parseCSV(text)
 
@@ -179,11 +190,14 @@ async function cargarDatos(){
   })
 
   status.innerText="Datos cargados ✓"
+
  }catch(e){
-  status.innerText="Error cargando datos"
+  console.error(e)
+  status.innerText="❌ Error cargando datos"
  }
 }
 
+// limpiar nombres
 function limpiarCol(h){
  let s=h.toLowerCase()
  if(s.includes("descripcion")) return "DESCRIPCIÓN"
@@ -195,6 +209,7 @@ function limpiarCol(h){
  return h
 }
 
+// buscar
 function buscar(){
 
  let p=pInput.value.toLowerCase()
@@ -221,7 +236,7 @@ function buscar(){
   return
  }
 
- // 💻 PC TABLA
+ // 💻 TABLA PC
  if(esPC()){
   let html="<table><thead><tr>"
 
@@ -249,7 +264,7 @@ function buscar(){
   return
  }
 
- // 📱 TARJETAS PRO
+ // 📱 TARJETAS
  let grupos={}
 
  f.forEach(i=>{
@@ -272,10 +287,9 @@ function buscar(){
 
       let val=item[h]||""
 
-      // color stock
       if(s.includes("cantidad")){
         let n=parseFloat(val)
-        val = `<span class="${n>0?'stock-ok':'stock-zero'}">${val}</span>`
+        val=`<span class="${n>0?'stock-ok':'stock-zero'}">${val}</span>`
       }
 
       html+=`
@@ -293,9 +307,11 @@ function buscar(){
  count.innerText=f.length
 }
 
-// inputs
 const pInput=document.getElementById("p")
 const dInput=document.getElementById("d")
+const status=document.getElementById("status")
+const r=document.getElementById("r")
+const count=document.getElementById("count")
 
 cargarDatos()
 
